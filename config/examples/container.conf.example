@@ -1,0 +1,182 @@
+###############################################################################
+# Dangelmaiers Container Configuration Example
+# -----------------------------------------------------------------------------
+# This is a template configuration file for containerized services
+# in the Dangelmaiers organization. Copy this file to 'container.conf'
+# and modify according to your service requirements.
+###############################################################################
+
+#==============================================================================
+# GENERAL SETTINGS
+#==============================================================================
+
+# Service identification
+SERVICE_NAME=example-service
+SERVICE_DESCRIPTION="Example service for Dangelmaiers organization"
+SERVICE_VERSION=1.0.0
+
+# Container runtime
+CONTAINER_RUNTIME=docker
+COMPOSE_VERSION=3.8
+
+# Environment selection (production, staging, development)
+ENVIRONMENT=production
+
+#==============================================================================
+# RESOURCE LIMITS
+#==============================================================================
+
+# CPU limits
+# Number of CPU cores allocated to the service
+CPU_LIMIT=2
+CPU_RESERVATION=0.5
+
+# Memory limits (in GB)
+MEMORY_LIMIT=4G
+MEMORY_RESERVATION=1G
+
+# Swap limits (in MB, 0 to disable swap)
+SWAP_LIMIT=2048
+DISABLE_OOM_KILL=false
+
+#==============================================================================
+# NETWORK CONFIGURATION
+#==============================================================================
+
+# Service ports
+SERVICE_PORT=8080
+PUBLISHED_PORT=8080
+METRICS_PORT=9090
+
+# Network settings
+NETWORK_PREFIX=dangelmaiers
+SERVICE_SUBNET=172.28.0.0/16
+ENABLE_IPV6=false
+
+# TLS/SSL configuration
+ENABLE_TLS=true
+TLS_CERT_PATH=/config/certs/service.crt
+TLS_KEY_PATH=/config/certs/service.key
+
+# DNS settings
+DNS_SERVER_1=192.168.1.1
+DNS_SERVER_2=1.1.1.1
+
+#==============================================================================
+# STORAGE SETTINGS
+#==============================================================================
+
+# Volume names
+VOLUME_PREFIX=dangelmaiers
+DATA_VOLUME_SIZE=10G
+BACKUP_VOLUME_SIZE=20G
+
+# Storage paths
+CONFIG_PATH=./config
+LOGS_PATH=./logs
+DATA_PATH=/data
+
+# Backup settings
+ENABLE_BACKUPS=true
+BACKUP_RETENTION_DAYS=30
+BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+
+#==============================================================================
+# DATABASE SETTINGS
+#==============================================================================
+
+# Database type (postgres, mysql, mongodb)
+DB_TYPE=postgres
+DB_IMAGE=postgres:14-alpine
+
+# Database connection
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=servicename
+DB_USER=dbuser
+DB_PASSWORD=dbpassword
+
+# Database settings
+DB_CPU_LIMIT=1
+DB_MEMORY_LIMIT=2G
+DB_VOLUME_SIZE=5G
+
+#==============================================================================
+# CACHE SETTINGS
+#==============================================================================
+
+# Cache type (redis, memcached)
+CACHE_TYPE=redis
+CACHE_IMAGE=redis:alpine
+
+# Cache settings
+CACHE_CPU_LIMIT=0.5
+CACHE_MEMORY_LIMIT=1G
+CACHE_PORT=6379
+
+#==============================================================================
+# ENVIRONMENT-SPECIFIC CONFIGURATIONS
+#==============================================================================
+
+# Production environment settings
+[production]
+REPLICAS=2
+PUBLISHED_PORT=443
+ENABLE_TLS=true
+BACKUP_RETENTION_DAYS=90
+MEMORY_LIMIT=8G
+
+# Staging environment settings
+[staging]
+REPLICAS=1
+PUBLISHED_PORT=8443
+ENABLE_TLS=true
+BACKUP_RETENTION_DAYS=14
+MEMORY_LIMIT=4G
+
+# Development environment settings
+[development]
+REPLICAS=1
+PUBLISHED_PORT=8080
+ENABLE_TLS=false
+BACKUP_RETENTION_DAYS=7
+MEMORY_LIMIT=2G
+
+#==============================================================================
+# MONITORING SETTINGS
+#==============================================================================
+
+# Prometheus monitoring
+ENABLE_PROMETHEUS=true
+METRICS_PATH=/metrics
+
+# Logging
+LOG_LEVEL=info
+LOG_MAX_SIZE=10m
+LOG_MAX_FILES=3
+
+# Health checks
+HEALTH_CHECK_PATH=/health
+HEALTH_CHECK_INTERVAL=30s
+HEALTH_CHECK_TIMEOUT=10s
+HEALTH_CHECK_RETRIES=3
+
+#==============================================================================
+# SECURITY SETTINGS
+#==============================================================================
+
+# Authentication
+AUTH_ENABLED=true
+AUTH_PROVIDER=local
+
+# Access control
+ADMIN_USER=admin
+# Do not store sensitive information in this file
+# Use .env file or environment variables for passwords
+ADMIN_PASSWORD=change_me_immediately
+
+# Security options
+ENABLE_SECCOMP=true
+DROP_CAPABILITIES=true
+READ_ONLY_ROOT=true
+

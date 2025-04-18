@@ -1,0 +1,158 @@
+# Docker Compose template for Dangelmaiers organization container services
+# Replace placeholders with actual values specific to your service
+version: '3.8'
+
+services:
+  # Main service - rename to match your application
+  app:
+    image: ${APP_IMAGE:-service-name:latest}
+    container_name: ${CONTAINER_PREFIX:-lxc}-${SERVICE_NAME:-service}
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      - TZ=Europe/Berlin
+      - SERVICE_PORT=${SERVICE_PORT:-8080}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-servicename}
+      - DB_USER=${DB_USER:-dbuser}
+      # Sensitive values should be stored in .env file
+      - DB_PASSWORD=${DB_PASSWORD:-dbpassword}
+      # Add more environment variables as needed
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '${CPU_LIMIT:-2}'
+          memory: ${MEMORY_LIMIT:-4G}
+        reservations:
+          cpus: '${CPU_RESERVATION:-0.5}'
+          memory: ${MEMORY_RESERVATION:-1G}
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVICE_PORT:-8080}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Storage volumes
+    volumes:
+      - ./config:/config:ro                          # Configuration (read-only)
+      - app-data:/data                               # Application data
+      - ./logs:/logs                                 # Logs
+    
+    # Network configuration
+    ports:
+      - "${PUBLISHED_PORT:-8080}:${SERVICE_PORT:-8080}"  # Main service port
+    
+    networks:
+      - service-network
+      - ${ADDITIONAL_NETWORK:-backend}
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Dependency management
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    
+    # Additional labels
+    labels:
+      - "org.dangelmaiers.service=${SERVICE_NAME:-service}"
+      - "org.dangelmaiers.environment=${ENVIRONMENT:-production}"
+      - "org.dangelmaiers.description=Main application service"
+      # Prometheus monitoring
+      - "prometheus.enable=true"
+      - "prometheus.port=${METRICS_PORT:-9090}"
+
+  # Database service (if needed)
+  db:
+    image: ${DB_IMAGE:-postgres:14-alpine}
+    container_name: ${CONTAINER_PREFIX:-lxc}-${SERVICE_NAME:-service}-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-servicename}
+      - POSTGRES_USER=${DB_USER:-dbuser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-dbpassword}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dbuser} -d ${DB_NAME:-servicename}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '${DB_CPU_LIMIT:-1}'
+          memory: ${DB_MEMORY_LIMIT:-2G}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Cache service (if needed)
+  cache:
+    image: ${CACHE_IMAGE:-redis:alpine}
+    container_name: ${CONTAINER_PREFIX:-lxc}-${SERVICE_NAME:-service}-cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - cache-data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '${CACHE_CPU_LIMIT:-0.5}'
+          memory: ${CACHE_MEMORY_LIMIT:-1G}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+# Persistent volumes
+volumes:
+  app-data:
+    name: ${VOLUME_PREFIX:-dangelmaiers}-${SERVICE_NAME:-service}-app-data
+  db-data:
+    name: ${VOLUME_PREFIX:-dangelmaiers}-${SERVICE_NAME:-service}-db-data
+  cache-data:
+    name: ${VOLUME_PREFIX:-dangelmaiers}-${SERVICE_NAME:-service}-cache-data
+
+# Networks
+networks:
+  # Publicly accessible network
+  service-network:
+    name: ${NETWORK_PREFIX:-dangelmaiers}-${SERVICE_NAME:-service}-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${SERVICE_SUBNET:-172.28.0.0/16}
+  
+  # Backend network for internal services
+  backend:
+    name: ${NETWORK_PREFIX:-dangelmaiers}-${SERVICE_NAME:-service}-backend
+    internal: true
+
